@@ -1,9 +1,12 @@
 package com.rhaissalima.restaurante.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -27,6 +30,10 @@ public class Cliente {
 	@NotNull(message = "O atributo email é obrigatório!")
 	@Size(min = 6, max = 255, message = "O atributo nome deve ter, ao menos, 2 caracteres!")
 	private String email;
+	
+	@ManyToOne
+	@JsonIgnoreProperties("cliente")
+	private Mesa mesa;
 
 	public Long getId() {
 		return id;
@@ -58,6 +65,14 @@ public class Cliente {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public Mesa getMesa() {
+		return mesa;
+	}
+
+	public void setMesa(Mesa mesa) {
+		this.mesa = mesa;
 	}
 	
 }

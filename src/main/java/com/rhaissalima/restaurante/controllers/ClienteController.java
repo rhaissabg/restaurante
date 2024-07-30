@@ -31,39 +31,46 @@ public class ClienteController {
 
 	@Autowired
 	private ClienteRepository clienteRepository;
-	
+
 	@Autowired
-	private MesaRepository MesaRepository;
-	
+	private MesaRepository mesaRepository;
+
 	@GetMapping
 	public ResponseEntity<List<Cliente>> getAll() {
 		return ResponseEntity.ok(clienteRepository.findAll());
 	}
-	
+
 	@GetMapping("/{id}")
 	public ResponseEntity<Cliente> getById(@PathVariable Long id) {
-		return clienteRepository.findById(id)
-				.map(m -> ResponseEntity.ok(m))
+		return clienteRepository.findById(id).map(m -> ResponseEntity.ok(m))
 				.orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
 	}
-	
+
 	@GetMapping("/nomes/{nome}")
 	public ResponseEntity<List<Cliente>> getByNome(@PathVariable String nome) {
 		return ResponseEntity.ok(clienteRepository.findAllByNomeContainingIgnoreCase(nome));
 	}
-	
+
 	@PostMapping
 	public ResponseEntity<Cliente> post(@Valid @RequestBody Cliente cliente) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(clienteRepository.save(cliente));
-	}
+		if (mesaRepository.existsById(cliente.getMesa().getId())) {
+			return ResponseEntity.status(HttpStatus.CREATED).body(clienteRepository.save(cliente));
+		}
+		throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Essa mesa não existe!", null);
 	
+	}
+
 	@PutMapping
 	public ResponseEntity<Cliente> put(@Valid @RequestBody Cliente cliente) {
-		return clienteRepository.findById(cliente.getId())
-				.map(m -> ResponseEntity.status(HttpStatus.OK).body(clienteRepository.save(cliente)))
-				.orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+		if (clienteRepository.existsById(cliente.getId())) {
+			if (mesaRepository.existsById(cliente.getMesa().getId())) {
+				ResponseEntity.status(HttpStatus.OK).body(clienteRepository.save(cliente));
+			}
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Essa mesa não existe!", null);
+		}
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 	}
-	
+
 	@DeleteMapping("/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void delete(@PathVariable Long id) {
@@ -73,5 +80,5 @@ public class ClienteController {
 		}
 		clienteRepository.deleteById(id);
 	}
-	
+
 }
