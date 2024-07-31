@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.rhaissalima.restaurante.models.Cliente;
+import com.rhaissalima.restaurante.models.Mesa;
 import com.rhaissalima.restaurante.repositories.ClienteRepository;
 import com.rhaissalima.restaurante.repositories.MesaRepository;
+import com.rhaissalima.restaurante.services.MesaService;
 
 import jakarta.validation.Valid;
 
@@ -34,6 +36,9 @@ public class ClienteController {
 
 	@Autowired
 	private MesaRepository mesaRepository;
+
+	@Autowired
+	private MesaService mesaService;
 
 	@GetMapping
 	public ResponseEntity<List<Cliente>> getAll() {
@@ -50,25 +55,38 @@ public class ClienteController {
 	public ResponseEntity<List<Cliente>> getByNome(@PathVariable String nome) {
 		return ResponseEntity.ok(clienteRepository.findAllByNomeContainingIgnoreCase(nome));
 	}
-
+	
 	@PostMapping
 	public ResponseEntity<Cliente> post(@Valid @RequestBody Cliente cliente) {
-		if (mesaRepository.existsById(cliente.getMesa().getId())) {
-			return ResponseEntity.status(HttpStatus.CREATED).body(clienteRepository.save(cliente));
+		Mesa mesa = mesaRepository.findById(cliente.getMesa().getId()).orElse(null);
+		if (mesa != null) { //confere se a mesa existe
+			if (mesa.getCapacidade() != null) { //confere se a capacidade da mesa existe
+				if (mesaService.countClientesByMesaId(mesa.getId()) < mesa.getCapacidade()) { //confere se a mesa está cheia
+					return ResponseEntity.status(HttpStatus.CREATED).body(clienteRepository.save(cliente));
+				}
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Essa mesa está cheia!", null);
+			}
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "A capacidade dessa mesa não foi definida!", null);
 		}
 		throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Essa mesa não existe!", null);
-	
 	}
-
+	
 	@PutMapping
 	public ResponseEntity<Cliente> put(@Valid @RequestBody Cliente cliente) {
-		if (clienteRepository.existsById(cliente.getId())) {
-			if (mesaRepository.existsById(cliente.getMesa().getId())) {
-				ResponseEntity.status(HttpStatus.OK).body(clienteRepository.save(cliente));
+		if (clienteRepository.existsById(cliente.getId())) { //confere se o cliente existe
+			Mesa mesa = mesaRepository.findById(cliente.getMesa().getId()).orElse(null);
+			if (mesa != null) { //confere se a mesa existe
+				if (mesa.getCapacidade() != null) { // confere se a capacidade da mesa existe
+					if (mesaService.countClientesByMesaId(mesa.getId()) < mesa.getCapacidade()) { // confere se a mesa está cheia
+						return ResponseEntity.status(HttpStatus.OK).body(clienteRepository.save(cliente));
+					}
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Essa mesa está cheia!", null);
+				}
+				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "A capacidade dessa mesa não foi definida!", null);
 			}
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Essa mesa não existe!", null);
 		}
-		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+		throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado!", null);
 	}
 
 	@DeleteMapping("/{id}")
